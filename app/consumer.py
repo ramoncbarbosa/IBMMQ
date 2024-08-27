@@ -1,24 +1,28 @@
 import pymqi
 import config.mq_config as config
 
+
 def receive_message():
-    # Conexão com o Queue Manager
+    conn_info = f"{config.MQ_HOST}({config.MQ_PORT})"
+
+    # Configurando o descritor de canal
+    cd = pymqi.CD()
+    cd.ChannelName = config.MQ_CHANNEL.encode('utf-8')
+    cd.ConnectionName = conn_info.encode('utf-8')
+    cd.ChannelType = pymqi.CMQC.MQCHT_CLNTCONN
+    cd.TransportType = pymqi.CMQC.MQXPT_TCP
+
+    # Conectando ao Queue Manager sem CSP
     qmgr = pymqi.QueueManager(None)
-    qmgr.connectTCPClient(config.MQ_QMGR, pymqi.cd(), {
-        pymqi.CMQCFC.MQCA_HOST_NAME: config.MQ_HOST,
-        pymqi.CMQCFC.MQIA_PORT_NUMBER: config.MQ_PORT,
-        pymqi.CMQCFC.MQCA_CHANNEL_NAME: config.MQ_CHANNEL,
-        pymqi.CMQCFC.MQCACH_USER_ID: config.MQ_USER,
-        pymqi.CMQCFC.MQCACH_PASSWORD: config.MQ_PASSWORD,
-    })
-    
-    # Abertura da fila para receber a mensagem
+    qmgr.connectTCPClient(config.MQ_QMGR, cd, conn_info, config.MQ_USER.encode('utf-8'),
+                          config.MQ_PASSWORD.encode('utf-8'))
+
+    # Recebendo a mensagem
     queue = pymqi.Queue(qmgr, config.MQ_QUEUE)
     message = queue.get()
     print(f"Message received: {message}")
-    
-    # Fechamento da fila e desconexão do Queue Manager
+
     queue.close()
     qmgr.disconnect()
-    
+
     return message
